@@ -1,0 +1,12 @@
+{
+  "name": "snake-game",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test:frontend": "node tests/frontend-smoke.js"
+  },
+  "devDependencies": {
+    "puppeteer": "^20.8.0"
+  }
+}

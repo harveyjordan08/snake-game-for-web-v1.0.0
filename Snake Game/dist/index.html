@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Play a responsive, privacy-friendly Snake game — keyboard, touch, gamepad support and a local leaderboard." />
+  <meta name="theme-color" content="#667eea" />
+  <meta property="og:title" content="Snake Game" />
+  <meta property="og:description" content="Play a responsive, privacy-friendly Snake game — keyboard, touch, gamepad support and a local leaderboard." />
+  <meta property="og:image" content="og-image.svg" />
+  <meta name="twitter:image" content="og-image.svg" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <title>Snake Game — Build</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:24px}.container{text-align:center;max-width:760px;width:100%}h1{margin-bottom:18px;text-shadow:0 4px 18px rgba(0,0,0,.25)}.game-info{display:flex;gap:20px;justify-content:center;margin-bottom:14px}.score,.highScore{background:rgba(0,0,0,.25);padding:8px 14px;border-radius:8px;font-weight:700}canvas{border-radius:8px;background:#1a1a2e;border:3px solid rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.45);display:block;margin:0 auto 14px;touch-action:none;max-width:90vmin;width:400px;height:400px;outline:none}.controls{margin-bottom:12px}.buttons{display:flex;gap:10px;justify-content:center}button{background:#667eea;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer}button:active{transform:translateY(1px)}button:focus,input:focus,select:focus,canvas:focus{outline:3px solid rgba(255,255,255,.14);outline-offset:3px}.settings{display:flex;gap:10px;justify-content:center;align-items:center;margin:12px 0;flex-wrap:wrap}select,.sound-toggle{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.06);padding:6px 8px;border-radius:6px}.game-message{margin-top:8px;font-weight:800;color:#ff6b6b;display:none}.instructions{color:rgba(255,255,255,.85);font-size:14px;margin-top:10px}.mobile-controls{display:none;gap:8px;justify-content:center;align-items:center;margin-top:12px}.touch-row{display:flex;gap:8px}.touch-btn{width:56px;height:56px;border-radius:12px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.06);font-size:20px;display:flex;align-items:center;justify-content:center}.touch-btn:active{transform:scale(.98)}.sr-only{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}@media(max-width:520px){.mobile-controls{display:flex}.buttons{display:none}canvas{width:92vmin;height:92vmin}}</style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐍 SNAKE GAME</h1>
+    <div class="game-info"><div class="score">Score: <span id="score">0</span></div><div class="highScore">High Score: <span id="highScore">0</span></div></div>
+    <canvas id="gameCanvas" width="400" height="400" aria-label="Snake game canvas"></canvas>
+    <div class="controls">
+      <p id="statusText" class="game-message" role="status" aria-live="polite">PAUSED</p>
+      <div class="buttons"><button id="startBtn">Start / Pause</button><button id="resetBtn">New Game</button></div>
+      <div class="settings"><label for="difficultySelect">Difficulty / Speed:</label><select id="difficultySelect" aria-label="Select difficulty or speed"><optgroup label="Difficulty"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></optgroup><optgroup label="Speed"><option value="slow">Slow</option><option value="medium">Medium</option><option value="fast">Fast</option></optgroup></select><label class="sound-toggle"><input id="soundToggle" type="checkbox"> SFX</label><label class="music-toggle"><input id="musicToggle" type="checkbox"> Music</label><label for="musicUrlInput" style="margin-left:8px;">Music (URL)</label><input id="musicUrlInput" type="url" placeholder="https://…/loop.mp3" style="width:220px;"><button id="musicLoadBtn">Load</button><label for="sfxPackSelect" style="margin-left:8px;">SFX pack</label><select id="sfxPackSelect"><option value="modern">Modern</option><option value="retro">Retro</option><option value="silent">Silent</option></select><label class="analytics-toggle"><input id="analyticsToggle" type="checkbox"> Analytics (opt-in)</label><label for="volumeSlider" style="margin-left:8px;">Volume:</label><input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="0.8" style="width:120px;"><label for="leaderboardUrl" style="margin-left:8px;">Leaderboard URL:</label><input id="leaderboardUrl" type="url" placeholder="https://your-server.example/scores" style="width:240px;"><button id="saveLeaderboardUrlBtn">Save</button></div>
+      <div class="mobile-controls" aria-hidden="false"><div class="touch-row"><button class="touch-btn" data-dir="up" aria-label="Up">▲</button></div><div class="touch-row"><button class="touch-btn" data-dir="left" aria-label="Left">◀</button><button class="touch-btn" data-dir="down" aria-label="Down">▼</button><button class="touch-btn" data-dir="right" aria-label="Right">▶</button></div></div>
+    </div>
+    <div class="instructions"><p><strong>Controls:</strong> Arrow keys / WASD (keyboard) or swipe / on-screen arrows (mobile).</p><p>Eat the red food to grow. Avoid walls & yourself — each food = +10 points.</p></div>
+    <div class="leaderboard" style="margin-top:14px;text-align:center;"><button id="showLeaderboardBtn" aria-controls="leaderboardPanel" aria-expanded="false">Show Leaderboard</button><button id="shareBtn" title="Share" aria-label="Share">Share</button><div id="leaderboardPanel" style="display:none;margin-top:10px;background:rgba(255,255,255,.03);padding:12px;border-radius:8px;max-width:480px;margin-left:auto;margin-right:auto;"><div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;gap:8px;align-items:center;"><label for="leaderboardSort" style="font-size:12px;opacity:.9;">Sort:</label><select id="leaderboardSort" style="padding:6px;border-radius:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);"><option value="score-desc">Score ↓</option><option value="score-asc">Score ↑</option><option value="date-desc">Newest</option><option value="name-asc">Name ↑</option></select><input id="leaderboardFilterName" placeholder="Filter name" aria-label="Filter leaderboard by name" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.06);width:120px;"><input id="leaderboardMinScore" type="number" placeholder="Min score" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.06);width:90px;"></div><div style="display:flex;gap:6px;align-items:center;"><button id="clearLocalLeaderboardBtn" title="Clear local leaderboard">Clear</button><span id="leaderboardCount" style="font-size:12px;opacity:.8;"></span></div></div><ol id="leaderboardList" style="text-align:left;padding-left:18px;margin:0 0 12px 0;"></ol><div id="submitScoreArea" style="display:none;gap:8px;align-items:center;justify-content:center;"><input id="playerNameInput" placeholder="Your name" aria-label="Player name" maxlength="32" style="padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.06);"><button id="submitScoreBtn">Submit score</button></div><p style="font-size:12px;opacity:0.8;margin-top:8px;">Scores are stored locally by default. Enter a remote leaderboard URL in settings to publish scores online.</p></div></div></div>
+  <script> // --- Configuration & difficulty ---
+const CSS_SIZE = 400;            // logical canvas size in CSS pixels
+const gridSize = 20;            // size of one tile in CSS pixels
+const tileCount = CSS_SIZE / gridSize; // number of tiles per row/column
+ const DIFFICULTIES = { slow: 220, easy: 140, medium: 120, normal: 100, hard: 70, fast: 70 };
+let currentTickMs = DIFFICULTIES[ localStorage.getItem('snakeDifficulty') || 'normal' ];
+ // --- Canvas high-DPI setup ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+canvas.style.width = CSS_SIZE + 'px';
+canvas.style.height = CSS_SIZE + 'px';
+canvas.width = Math.floor(CSS_SIZE * dpr);
+canvas.height = Math.floor(CSS_SIZE * dpr);
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+ // --- Game state ---
+let snake = [{ x: 10, y: 10 }];
+let food = { x: 15, y: 15 };
+let score = 0;
+let highScore = Number(localStorage.getItem('snakeHighScore') || 0);
+let gameRunning = false;
+let gameOver = false;
+ let velocityX = 0, velocityY = 0;
+let nextVelocityX = 0, nextVelocityY = 0;
+ // UI refs
+const scoreEl = document.getElementById('score');
+const highScoreEl = document.getElementById('highScore');
+const statusEl = document.getElementById('statusText');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const difficultySelect = document.getElementById('difficultySelect');
+const soundToggle = document.getElementById('soundToggle');
+ highScoreEl.textContent = highScore;
+ // small UI helpers (status banner)
+function showStatus(msg) { try { statusEl.style.display = 'block'; statusEl.textContent = msg || ''; } catch (e) {} }
+function hideStatus() { try { statusEl.style.display = 'none'; statusEl.textContent = ''; } catch (e) {} }
+// ensure initial status is hidden (CSS has .game-message hidden by default)
+hideStatus();
+// --- Audio (WebAudio synth; richer effects + music + volume) ---
+let audioCtx = null;
+let masterGain = null;
+let musicGain = null;
+let musicOsc = null;
+let musicRunning = false;
+ let soundsEnabled = localStorage.getItem('snakeSound') !== '0'; // default ON
+let musicEnabled = localStorage.getItem('snakeMusic') === '1';
+let analyticsEnabled = localStorage.getItem('snakeAnalytics') === '1';
+let volume = Number(localStorage.getItem('snakeVolume') ?? 0.8);
+let sfxPack = localStorage.getItem('snakeSfxPack') || 'modern';
+let musicAudio = null; // optional HTMLAudioElement if user supplies a URL
+ function ensureAudio() {
+  if (!soundsEnabled && !musicEnabled) return;
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(audioCtx.destination);
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.18 * volume;
+    musicGain.connect(audioCtx.destination);
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+}
+ function setVolume(v) {
+  volume = Math.max(0, Math.min(1, Number(v)));
+  if (masterGain) masterGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.01);
+  if (musicGain) musicGain.gain.setTargetAtTime(0.18 * volume, audioCtx.currentTime, 0.01);
+  if (musicAudio) musicAudio.volume = 0.18 * volume;
+  localStorage.setItem('snakeVolume', String(volume));
+}
+ function playSound(name = 'click') {
+  if (!soundsEnabled) return;
+  if (sfxPack === 'silent') return;
+  ensureAudio();
+  if (!audioCtx) return; // still blocked
+   const now = audioCtx.currentTime;
+   // Retro pack: short, chiptune-style beeps
+  if (sfxPack === 'retro') {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(masterGain || audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, now);
+    switch (name) {
+      case 'eat':
+        o.type = 'square'; o.frequency.setValueAtTime(1400, now);
+        g.gain.exponentialRampToValueAtTime(0.12, now + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+        o.start(now); o.stop(now + 0.09);
+        break;
+      case 'move':
+        o.type = 'square'; o.frequency.setValueAtTime(1200, now);
+        g.gain.exponentialRampToValueAtTime(0.04, now + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+        o.start(now); o.stop(now + 0.045);
+        break;
+      case 'gameover':
+        o.type = 'square'; o.frequency.setValueAtTime(880, now);
+        g.gain.exponentialRampToValueAtTime(0.18, now + 0.001);
+        o.frequency.exponentialRampToValueAtTime(220, now + 0.45);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+        o.start(now); o.stop(now + 0.48);
+        break;
+      case 'start':
+        o.type = 'triangle'; o.frequency.setValueAtTime(600, now);
+        g.gain.exponentialRampToValueAtTime(0.08, now + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        o.start(now); o.stop(now + 0.13);
+        break;
+      default:
+        o.type = 'square'; o.frequency.setValueAtTime(900, now);
+        g.gain.exponentialRampToValueAtTime(0.08, now + 0.001);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+        o.start(now); o.stop(now + 0.08);
+    }
+    return;
+  }
+   // Modern synth pack (original behavior)
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(masterGain || audioCtx.destination);
+   switch (name) {
+    case 'eat': {
+      const base = 880;
+      const pitch = Math.min(1.6, 1 + (snake.length - 1) * 0.02);
+      o.type = 'sine'; o.frequency.setValueAtTime(base * pitch, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+      o.frequency.exponentialRampToValueAtTime(base * 1.5 * pitch, now + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      o.start(now); o.stop(now + 0.18);
+      break;
+    }
+    case 'move': {
+      o.type = 'square'; o.frequency.setValueAtTime(1200, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.02, now + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+      o.start(now); o.stop(now + 0.06);
+      break;
+    }
+    case 'start': {
+      o.type = 'triangle'; o.frequency.setValueAtTime(440, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+      o.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      o.start(now); o.stop(now + 0.22);
+      break;
+    }
+    case 'level': {
+      o.type = 'sine'; o.frequency.setValueAtTime(680, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+      o.frequency.exponentialRampToValueAtTime(920, now + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      o.start(now); o.stop(now + 0.16);
+      break;
+    }
+    case 'gameover': {
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(300, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+      o.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+      o.start(now); o.stop(now + 0.7);
+      break;
+    }
+    case 'click':
+    default: {
+      o.type = 'square'; o.frequency.setValueAtTime(900, now);
+      g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.08, now + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+      o.start(now); o.stop(now + 0.1);
+      break;
+    }
+  }
+}
+ // --- Background music (ambient pad + simple melodic loop) ---
+function playMusic() {
+  if (!musicEnabled) return;
+  ensureAudio();
+  // external audio URL takes precedence
+  if (musicAudio && musicAudio.src) {
+    musicAudio.volume = 0.18 * volume;
+    musicAudio.loop = true;
+    musicAudio.play().catch(()=>{});
+    return;
+  }
+  if (!audioCtx || musicRunning) return;
+
+  // pad oscillator (ambient bed)
+  musicGain = musicGain || audioCtx.createGain();
+  musicGain.gain.value = 0.18 * volume;
+
+  musicOsc = audioCtx.createOscillator();
+  musicOsc.type = 'sine';
+  musicOsc.frequency.value = 110; // low pad
+  const padGain = audioCtx.createGain();
+  padGain.gain.value = 0.06 * volume;
+  musicOsc.connect(padGain);
+  padGain.connect(musicGain);
+  musicOsc._padGain = padGain;
+
+  // subtle LFO to breathe the pad
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.type = 'sine'; lfo.frequency.value = 0.25; lfoGain.gain.value = 20;
+  lfo.connect(lfoGain); lfoGain.connect(musicOsc.frequency);
+
+  musicGain.connect(audioCtx.destination);
+  musicOsc.start(); lfo.start();
+
+  // melodic lead (short, looping notes) — created per-note for clean envelopes
+  // melodic lead — generate a short, pleasant random melody each time music starts
+  function _generateRandomMelody(len = 6, tonic = 440) {
+    const pentatonic = [0,2,4,7,9,12];
+    const out = [];
+    for (let i = 0; i < len; i++) {
+      const oct = Math.random() < 0.6 ? 0 : 12;
+      const off = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+      const semitone = off + oct - 12;
+      out.push(tonic * Math.pow(2, semitone / 12));
+    }
+    return out;
+  }
+  const tonicChoices = [220,246.94,261.63,293.66,329.63];
+  const tonic = tonicChoices[Math.floor(Math.random() * tonicChoices.length)];
+  const melody = _generateRandomMelody(6, tonic);
+  let idx = 0;
+  const noteIntervalMs = 280 + Math.floor(Math.random() * 140);
+  musicOsc._melodyInterval = setInterval(() => {
+    const now = audioCtx.currentTime;
+    const freq = melody[idx % melody.length];
+    const noteOsc = audioCtx.createOscillator();
+    const noteGain = audioCtx.createGain();
+    noteOsc.type = 'triangle';
+    noteOsc.frequency.setValueAtTime(freq, now);
+    noteGain.gain.setValueAtTime(0.0001, now);
+    noteGain.gain.exponentialRampToValueAtTime(0.12 * volume, now + 0.01);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+    noteOsc.connect(noteGain); noteGain.connect(musicGain);
+    noteOsc.start(now); noteOsc.stop(now + 0.3);
+    idx++;
+  }, noteIntervalMs);
+
+  musicRunning = true;
+  // store references so stopMusic can disconnect/cleanup
+  musicOsc._lfo = lfo;
+  musicOsc._lfoGain = lfoGain;
+  musicOsc._padGain = padGain;
+  musicOsc.connect(musicGain);
+  lfo.type = 'sine'; lfo.frequency.value = 0.25; lfoGain.gain.value = 40; lfo.connect(lfoGain); lfoGain.connect(musicOsc.frequency);
+  musicGain.connect(audioCtx.destination);
+  musicOsc.start(); lfo.start();
+  musicRunning = true;
+  // store references so stopMusic can disconnect
+  musicOsc._lfo = lfo;
+  musicOsc._lfoGain = lfoGain;
+}
+ function stopMusic() {
+  // stop external audio first if present
+  if (musicAudio) {
+    try { musicAudio.pause(); musicAudio.currentTime = 0; } catch (e) {}
+  }
+  if (!musicRunning || !musicOsc) return;
+  try { musicOsc._lfo.stop(); } catch (e) {}
+  try { musicOsc.stop(); } catch (e) {}
+  try { musicOsc.disconnect(); } catch (e) {}
+  musicOsc = null; musicRunning = false;
+}
+ // Unlock audio and music on first interaction (best-effort)
+document.addEventListener('pointerdown', () => { if (soundsEnabled || musicEnabled) ensureAudio(); }, { once: true, passive: true });
+  // --- Difficulty handling ---
+function applyDifficulty(level, persist = true) {
+  if (!DIFFICULTIES[level]) level = 'normal';
+  currentTickMs = DIFFICULTIES[level];
+  if (persist) localStorage.setItem('snakeDifficulty', level);
+  showStatus(level.charAt(0).toUpperCase() + level.slice(1));
+  setTimeout(hideStatus, 800);
+  playSound('level');
+}
+ // initialize difficulty + sound/music/analytics UI from localStorage
+difficultySelect.value = localStorage.getItem('snakeDifficulty') || 'normal';
+soundToggle.checked = soundsEnabled;
+document.getElementById('volumeSlider').value = volume;
+setVolume(volume);
+applyDifficulty(difficultySelect.value, false);
+ // music + analytics toggles
+const musicToggle = document.getElementById('musicToggle');
+const analyticsToggle = document.getElementById('analyticsToggle');
+musicToggle.checked = localStorage.getItem('snakeMusic') === '1';
+analyticsToggle.checked = analyticsEnabled;
+ difficultySelect.addEventListener('change', (e) => { applyDifficulty(e.target.value); });
+soundToggle.addEventListener('change', (e) => { soundsEnabled = e.target.checked; localStorage.setItem('snakeSound', soundsEnabled ? '1' : '0'); if (soundsEnabled) ensureAudio(); playSound('click'); });
+document.getElementById('volumeSlider').addEventListener('input', (e) => { setVolume(e.target.value); });
+ // SFX pack selector + external music URL loader
+const sfxPackSelect = document.getElementById('sfxPackSelect');
+sfxPackSelect.value = sfxPack;
+sfxPackSelect.addEventListener('change', (e) => { sfxPack = e.target.value; localStorage.setItem('snakeSfxPack', sfxPack); playSound('click'); });
+ const musicUrlInput = document.getElementById('musicUrlInput');
+const musicLoadBtn = document.getElementById('musicLoadBtn');
+musicUrlInput.value = localStorage.getItem('snakeMusicUrl') || '';
+musicLoadBtn.addEventListener('click', () => {
+  const url = musicUrlInput.value.trim();
+  if (!url) { showStatus('Enter a music URL'); setTimeout(hideStatus,900); return; }
+  try {
+    if (musicAudio) { musicAudio.pause(); musicAudio = null; }
+    musicAudio = new Audio(url);
+    musicAudio.loop = true;
+    musicAudio.volume = 0.18 * volume;
+    musicAudio.addEventListener('canplay', () => {
+      localStorage.setItem('snakeMusicUrl', url);
+      musicEnabled = true; musicToggle.checked = true;
+      ensureAudio();
+      musicAudio.play().catch(()=>{});
+      showStatus('Music loaded'); setTimeout(hideStatus,900);
+    });
+    musicAudio.addEventListener('error', () => { showStatus('Failed to load music'); setTimeout(hideStatus,900); musicAudio = null; });
+  } catch (err) { showStatus('Invalid URL'); setTimeout(hideStatus,900); musicAudio = null; }
+});
+ musicToggle.addEventListener('change', (e) => {
+  musicEnabled = e.target.checked;
+  localStorage.setItem('snakeMusic', musicEnabled ? '1' : '0');
+  if (musicEnabled) { ensureAudio(); playMusic(); } else { stopMusic(); }
+});
+ analyticsToggle.addEventListener('change', (e) => {
+  analyticsEnabled = e.target.checked;
+  localStorage.setItem('snakeAnalytics', analyticsEnabled ? '1' : '0');
+});
+ if (musicToggle.checked) { musicEnabled = true; ensureAudio(); playMusic(); }
+  // --- Input handling (keyboard / touch / buttons) ---
+function setDirection(nx, ny) {
+  if (nx === -velocityX && ny === -velocityY) return;
+  nextVelocityX = nx; nextVelocityY = ny; ensureStarted();
+  playSound('move');
+}
+ document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  switch (key) {
+    case 'arrowup': case 'w': setDirection(0, -1); e.preventDefault(); break;
+    case 'arrowdown': case 's': setDirection(0, 1);  e.preventDefault(); break;
+    case 'arrowleft': case 'a': setDirection(-1, 0); e.preventDefault(); break;
+    case 'arrowright': case 'd': setDirection(1, 0);  e.preventDefault(); break;
+  }
+});
+let touchStartX = 0, touchStartY = 0;
+const SWIPE_THRESHOLD = 24;
+canvas.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY; }, { passive: true });
+canvas.addEventListener('touchend', (ev) => { const t = ev.changedTouches[0]; const dx = t.clientX - touchStartX; const dy = t.clientY - touchStartY; if (Math.abs(dx) > Math.abs(dy)) { if (dx > SWIPE_THRESHOLD) setDirection(1,0); else if (dx < -SWIPE_THRESHOLD) setDirection(-1,0); } else { if (dy > SWIPE_THRESHOLD) setDirection(0,1); else if (dy < -SWIPE_THRESHOLD) setDirection(0,-1); } }, { passive: true });
+ document.querySelectorAll('.touch-btn').forEach(btn => { const dir = btn.dataset.dir; btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchBtn(dir); }, { passive: false }); btn.addEventListener('mousedown', () => handleTouchBtn(dir)); });
+function handleTouchBtn(dir) { if (dir === 'up') setDirection(0, -1); if (dir === 'down') setDirection(0, 1); if (dir === 'left') setDirection(-1, 0); if (dir === 'right') setDirection(1, 0); }
+ // --- Gamepad support (polling) ---
+let gpIndex = null;
+const gamepadStatusEl = document.getElementById('gamepadConnected');
+ function updateGamepadStatus(connected) {
+  if (!gamepadStatusEl) return;
+  gamepadStatusEl.textContent = connected ? 'Yes' : 'No';
+}
+ window.addEventListener('gamepadconnected', (e) => { gpIndex = e.gamepad.index; updateGamepadStatus(true); });
+window.addEventListener('gamepaddisconnected', (e) => { if (gpIndex === e.gamepad.index) gpIndex = null; updateGamepadStatus(false); });
+ function pollGamepad() {
+  if (gpIndex === null) { requestAnimationFrame(pollGamepad); return; }
+  const gp = navigator.getGamepads()[gpIndex];
+  if (gp) {
+    // D-pad buttons (12 up,13 down,14 left,15 right)
+    if (gp.buttons[12]?.pressed) setDirection(0, -1);
+    else if (gp.buttons[13]?.pressed) setDirection(0, 1);
+    else if (gp.buttons[14]?.pressed) setDirection(-1, 0);
+    else if (gp.buttons[15]?.pressed) setDirection(1, 0);
+    // Left stick fallback
+    const ax = gp.axes[0] || 0; const ay = gp.axes[1] || 0;
+    if (ax < -0.6) setDirection(-1, 0);
+    else if (ax > 0.6) setDirection(1, 0);
+    if (ay < -0.6) setDirection(0, -1);
+    else if (ay > 0.6) setDirection(0, 1);
+  }
+  requestAnimationFrame(pollGamepad);
+}
+requestAnimationFrame(pollGamepad);
+ // --- Spawn / update / draw ---
+function spawnFood() {
+  let newFood, isOnSnake;
+  do {
+    isOnSnake = false;
+    newFood = { x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount) };
+    for (const s of snake) if (s.x === newFood.x && s.y === newFood.y) { isOnSnake = true; break; }
+  } while (isOnSnake);
+  food = newFood;
+}
+ function update() {
+  if (!gameRunning || gameOver) return;
+  velocityX = nextVelocityX; velocityY = nextVelocityY;
+  if (velocityX === 0 && velocityY === 0) return;
+   const head = { x: snake[0].x + velocityX, y: snake[0].y + velocityY };
+  if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) { playSound('gameover'); return endGame(); }
+  for (const seg of snake) if (seg.x === head.x && seg.y === head.y) { playSound('gameover'); return endGame(); }
+   snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) {
+    score += 10; scoreEl.textContent = score; playSound('eat'); spawnFood();
+  } else {
+    snake.pop();
+  }
+}
+ function draw() {
+  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
+  ctx.strokeStyle = '#2a2a4e'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= tileCount; i++) { const pos = i * gridSize; ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, CSS_SIZE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(CSS_SIZE, pos); ctx.stroke(); }
+  snake.forEach((seg, i) => { ctx.fillStyle = i === 0 ? '#4ecca3' : '#45b393'; ctx.fillRect(seg.x * gridSize + 1, seg.y * gridSize + 1, gridSize - 2, gridSize - 2); });
+  ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(food.x * gridSize + gridSize / 2, food.y * gridSize + gridSize / 2, gridSize / 2 - 2, 0, Math.PI * 2); ctx.fill();
+}
+ // --- Game loop (dynamic speed) ---
+function gameLoop() { update(); draw(); setTimeout(gameLoop, currentTickMs); }
+ // --- Controls ---
+function toggleGame() {
+  if (gameOver) return;
+  gameRunning = !gameRunning;
+  if (!gameRunning) {
+    showStatus('PAUSED');
+    playSound('click');
+  } else {
+    hideStatus();
+    playSound('click');
+    // auto-enable background music on first user start if user hasn't set a preference
+    if (localStorage.getItem('snakeMusic') === null && !musicEnabled) {
+      musicEnabled = true;
+      musicToggle.checked = true;
+      localStorage.setItem('snakeMusic', '1');
+      ensureAudio();
+      playMusic();
+    } else if (musicEnabled) {
+      ensureAudio();
+      playMusic();
+    }
+  }
+}
+function resetGame() {
+  snake = [{ x: 10, y: 10 }]; food = { x: 15, y: 15 }; score = 0; scoreEl.textContent = 0;
+  gameRunning = false; gameOver = false; velocityX = velocityY = nextVelocityX = nextVelocityY = 0;
+  hideStatus(); spawnFood(); draw(); playSound('click');
+}
+ function endGame() {
+  gameRunning = false;
+  gameOver = true;
+  showStatus('GAME OVER!');
+   if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('snakeHighScore', String(highScore));
+    highScoreEl.textContent = highScore;
+  }
+   // show name prompt and save locally
+  showSubmitScoreUI();
+  const storedName = localStorage.getItem('snakePlayerName') || '';
+  const remoteUrl = localStorage.getItem('snakeLeaderboardUrl') || '';
+   // always save locally
+  saveLocalScore(storedName || 'Anon', score);
+   // attempt auto-submit if remote configured and we have a stored name
+  if (remoteUrl && storedName) {
+    (async () => {
+      try {
+        const remoteTop = await fetchRemoteScores(remoteUrl, 10).catch(() => []);
+        const minRemote = (remoteTop && remoteTop.length === 10) ? remoteTop[remoteTop.length - 1].score : -Infinity;
+        if (!remoteTop || remoteTop.length < 10 || score > minRemote) {
+          await postRemoteScore(remoteUrl, storedName || 'Anon', score);
+          showStatus('Score submitted');
+          setTimeout(hideStatus, 1200);
+        }
+      } catch (err) {
+        // ignore remote failure
+      }
+      refreshLeaderboard();
+    })();
+  } else {
+    refreshLeaderboard();
+  }
+}
+ // Pause on tab-change
+document.addEventListener('visibilitychange', () => { if (document.hidden && gameRunning) { gameRunning = false; showStatus('PAUSED'); stopMusic(); } });
+ // Hook up UI
+startBtn.addEventListener('click', (e) => { ensureAudio(); toggleGame(); });
+resetBtn.addEventListener('click', (e) => { ensureAudio(); resetGame(); });
+ // --- Leaderboard (local fallback + optional remote) ---
+const LOCAL_LEADERBOARD_KEY = 'snakeLocalLeaderboard';
+ function getLocalLeaderboard(limit = 10) {
+  try {
+    const raw = localStorage.getItem(LOCAL_LEADERBOARD_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return arr.sort((a,b) => b.score - a.score).slice(0, limit);
+  } catch (e) { return []; }
+}
+ function saveLocalScore(name, score) {
+  const arr = getLocalLeaderboard(100);
+  arr.push({ name: name || 'Anon', score: Number(score), ts: Date.now() });
+  arr.sort((a,b) => b.score - a.score);
+  localStorage.setItem(LOCAL_LEADERBOARD_KEY, JSON.stringify(arr.slice(0, 100)));
+}
+ async function fetchRemoteScores(url, limit = 10) {
+  try {
+    const res = await fetch(url + '?limit=' + limit);
+    if (!res.ok) throw new Error('bad');
+    const data = await res.json();
+    return data;
+  } catch (err) { throw err; }
+}
+ async function postRemoteScore(url, name, score) {
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, score }) });
+    if (!res.ok) throw new Error('post failed');
+    return await res.json();
+  } catch (err) { throw err; }
+}
+ // UI helpers
+const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
+const shareBtn = document.getElementById('shareBtn');
+const leaderboardPanel = document.getElementById('leaderboardPanel');
+const leaderboardList = document.getElementById('leaderboardList');
+const submitScoreArea = document.getElementById('submitScoreArea');
+const playerNameInput = document.getElementById('playerNameInput');
+const submitScoreBtn = document.getElementById('submitScoreBtn');
+const leaderboardUrlInput = document.getElementById('leaderboardUrl');
+const saveLeaderboardUrlBtn = document.getElementById('saveLeaderboardUrlBtn');
+ // new leaderboard controls
+const leaderboardSort = document.getElementById('leaderboardSort');
+const leaderboardFilterName = document.getElementById('leaderboardFilterName');
+const leaderboardMinScore = document.getElementById('leaderboardMinScore');
+const clearLocalLeaderboardBtn = document.getElementById('clearLocalLeaderboardBtn');
+const leaderboardCount = document.getElementById('leaderboardCount');
+ // prefill remote URL input
+leaderboardUrlInput.value = localStorage.getItem('snakeLeaderboardUrl') || '';
+ // validate & save leaderboard URL (warn on insecure HTTP when served over HTTPS)
+saveLeaderboardUrlBtn.addEventListener('click', () => {
+  const url = (leaderboardUrlInput.value || '').trim();
+  if (!url) { localStorage.removeItem('snakeLeaderboardUrl'); showStatus('Leaderboard URL cleared'); setTimeout(hideStatus,900); return; }
+  try {
+    const u = new URL(url);
+    if (location.protocol === 'https:' && u.protocol === 'http:') {
+      showStatus('Warning: insecure leaderboard URL (use https)');
+      setTimeout(hideStatus, 1800);
+    }
+    localStorage.setItem('snakeLeaderboardUrl', url);
+    showStatus('Leaderboard URL saved'); setTimeout(hideStatus,900);
+    refreshLeaderboard();
+  } catch (err) {
+    showStatus('Invalid URL'); setTimeout(hideStatus,900);
+  }
+});
+ // Social share (privacy-first)
+if (shareBtn) {
+  shareBtn.addEventListener('click', () => {
+    const shareText = `I scored ${score} on Snake Game! Can you beat me?`;
+    const url = location.href.replace(/\/index.html$/,'/');
+    if (navigator.share) {
+      navigator.share({ title: 'Snake Game', text: shareText, url }).catch(() => {});
+    } else {
+      const twitter = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
+      window.open(twitter, '_blank', 'noopener');
+    }
+    if (analyticsEnabled) {
+      const a = JSON.parse(localStorage.getItem('snakeAnalyticsData') || '{}');
+      a.shares = (a.shares || 0) + 1; localStorage.setItem('snakeAnalyticsData', JSON.stringify(a));
+    }
+  });
+}
+ function updateLeaderboardUI(entries) {
+  leaderboardList.innerHTML = '';
+  leaderboardCount.textContent = entries ? `${entries.length} shown` : '';
+  if (!entries || entries.length === 0) {
+    leaderboardList.innerHTML = '<li style="opacity:.7">No scores yet</li>';
+    return;
+  }
+  for (const e of entries) {
+    const li = document.createElement('li');
+    const ts = e.ts ? new Date(e.ts).toLocaleDateString() : '';
+    li.textContent = `${e.name} — ${e.score}` + (ts ? ` (${ts})` : '');
+    leaderboardList.appendChild(li);
+  }
+}
+ function applyLeaderboardQuery(entries) {
+  let arr = Array.isArray(entries) ? entries.slice() : [];
+  const nameFilter = (leaderboardFilterName.value || '').trim().toLowerCase();
+  const minScore = Number(leaderboardMinScore.value || 0);
+  if (nameFilter) arr = arr.filter(e => (e.name || '').toLowerCase().includes(nameFilter));
+  if (minScore) arr = arr.filter(e => Number(e.score) >= minScore);
+   switch (leaderboardSort.value) {
+    case 'score-asc': arr.sort((a,b) => a.score - b.score); break;
+    case 'date-desc': arr.sort((a,b) => (b.ts||0) - (a.ts||0)); break;
+    case 'name-asc': arr.sort((a,b) => (a.name||'').localeCompare(b.name||'')); break;
+    case 'score-desc':
+    default:
+      arr.sort((a,b) => b.score - a.score);
+  }
+  return arr;
+}
+ async function refreshLeaderboard() {
+  const remoteUrl = localStorage.getItem('snakeLeaderboardUrl') || '';
+  let entries = [];
+  if (remoteUrl) {
+    try {
+      entries = await fetchRemoteScores(remoteUrl, 100);
+    } catch (err) {
+      entries = getLocalLeaderboard(100);
+    }
+  } else {
+    entries = getLocalLeaderboard(100);
+  }
+   const shown = applyLeaderboardQuery(entries).slice(0, 50);
+  updateLeaderboardUI(shown);
+}
+ function toggleLeaderboardPanel() {
+  const visible = leaderboardPanel.style.display !== 'block';
+  leaderboardPanel.style.display = visible ? 'block' : 'none';
+  if (visible) refreshLeaderboard();
+  try { showLeaderboardBtn.setAttribute('aria-expanded', visible ? 'true' : 'false'); } catch (e) {}
+}
+ showLeaderboardBtn.addEventListener('click', () => { toggleLeaderboardPanel(); playSound('click'); });
+ // filter / sort handlers
+leaderboardSort.addEventListener('change', () => { refreshLeaderboard(); playSound('click'); });
+leaderboardFilterName.addEventListener('input', () => { refreshLeaderboard(); });
+leaderboardMinScore.addEventListener('input', () => { refreshLeaderboard(); });
+clearLocalLeaderboardBtn.addEventListener('click', () => { localStorage.removeItem(LOCAL_LEADERBOARD_KEY); refreshLeaderboard(); playSound('click'); });
+ // When the game ends, show submit UI and allow submission
+function showSubmitScoreUI() {
+  submitScoreArea.style.display = 'flex';
+  playerNameInput.value = localStorage.getItem('snakePlayerName') || '';
+  setTimeout(() => { try { playerNameInput.focus(); } catch (e) {} }, 60);
+}
+ submitScoreBtn.addEventListener('click', async () => {
+  submitScoreBtn.disabled = true;
+  const name = (playerNameInput.value || 'Anon').slice(0, 32);
+  const remoteUrl = localStorage.getItem('snakeLeaderboardUrl') || '';
+  saveLocalScore(name, score);
+  localStorage.setItem('snakePlayerName', name);
+  if (analyticsEnabled) {
+    const a = JSON.parse(localStorage.getItem('snakeAnalyticsData') || '{}');
+    a.submissions = (a.submissions || 0) + 1; localStorage.setItem('snakeAnalyticsData', JSON.stringify(a));
+  }
+  try {
+    if (remoteUrl) {
+      await postRemoteScore(remoteUrl, name, score);
+    }
+    playSound('click');
+    showStatus('Score saved');
+    setTimeout(hideStatus, 900);
+  } catch (err) {
+    showStatus('Saved locally');
+    setTimeout(hideStatus, 900);
+  }
+  refreshLeaderboard();
+  submitScoreArea.style.display = 'none';
+  submitScoreBtn.disabled = false;
+});
+ saveLeaderboardUrlBtn.addEventListener('click', () => {
+  const url = leaderboardUrlInput.value.trim();
+  if (url) localStorage.setItem('snakeLeaderboardUrl', url);
+  else localStorage.removeItem('snakeLeaderboardUrl');
+  playSound('click');
+});
+// Start loop + initial draw
+spawnFood(); draw(); gameLoop();
+ // Accessibility: make canvas focusable and link to instructions
+const gameCanvas = document.getElementById('gameCanvas');
+gameCanvas.setAttribute('tabindex', '0');
+gameCanvas.setAttribute('role', 'application');
+gameCanvas.setAttribute('aria-describedby', 'statusText');
+ // Simple, local, privacy-friendly analytics store (opt-in)
+window.snakeAnalytics = {
+  enabled: analyticsEnabled,
+  data: JSON.parse(localStorage.getItem('snakeAnalyticsData') || '{}'),
+  track: (k) => { if (!analyticsEnabled) return; const d = JSON.parse(localStorage.getItem('snakeAnalyticsData') || '{}'); d[k] = (d[k] || 0) + 1; localStorage.setItem('snakeAnalyticsData', JSON.stringify(d)); }
+};
+ // Expose refresh for debugging
+window.refreshLeaderboard = refreshLeaderboard;
+  </script>
+</body>
+</html>
